@@ -6,9 +6,9 @@ import retrofit2.http.GET
 
 interface GitHubService {
     @GET("/repositories")
-    fun retrieveRepositories() : Call<RepoResult>
+    suspend fun retrieveRepositories() : RepoResult
 
     @GET ("/search/repositories?q=language:kotlin&sort=star&order=desc&per_page=50")
-    fun searchRepositories(): Call<RepoResult>
+    suspend fun searchRepositories(): RepoResult
 
 }

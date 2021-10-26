@@ -27,9 +27,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
 package com.raywenderlich.githubrepolist.ui.adapters
-
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -38,6 +37,7 @@ import com.raywenderlich.githubrepolist.R
 import com.raywenderlich.githubrepolist.data.Item
 import com.raywenderlich.githubrepolist.data.RepoResult
 import com.raywenderlich.githubrepolist.extensions.ctx
+import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.item_repo.view.*
 
 
@@ -56,11 +56,13 @@ class RepoListAdapter(private val repoList: RepoResult) :
 
     override fun getItemCount(): Int = repoList.items.size
 
-    class ViewHolder(val view: View) : RecyclerView.ViewHolder(view) {
+    class ViewHolder(private val view: View) : RecyclerView.ViewHolder(view) {
         fun bindRepo(repo: Item) {
             itemView.username.text = repo.owner.login.orEmpty()
             itemView.repoName.text = repo.fullName.orEmpty()
             itemView.repoDescription.text = repo.description.orEmpty()
+            repo.owner.avatarUrl?.let { Log.d("RepoImage", it) }
+            Picasso.get().load(repo.owner.avatarUrl).into(itemView.icon)
 
 
         }

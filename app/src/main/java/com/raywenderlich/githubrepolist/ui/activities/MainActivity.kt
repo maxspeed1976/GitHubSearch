@@ -37,80 +37,72 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
 
 
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import api.RepositoryRetriever
 import com.raywenderlich.githubrepolist.R
-import com.raywenderlich.githubrepolist.data.RepoResult
-import com.raywenderlich.githubrepolist.data.Request
+
 import com.raywenderlich.githubrepolist.ui.adapters.RepoListAdapter
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.Dispatchers.Main
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 
 
 class MainActivity : Activity() {
-    private val repoRetriever = RepositoryRetriever()
-    private val callback = object : Callback<RepoResult> {
-        override fun onFailure(call: Call<RepoResult>?, t:Throwable?){
-            Log.e("MainActivity","Problem calling Github API {${t?.message}}")
-        }
 
-        override fun onResponse(call: Call<RepoResult>, response: Response<RepoResult>) {
-            response.isSuccessful.let{
-                val resultList = RepoResult(response.body()?.items ?: emptyList())
-                repoList.adapter = RepoListAdapter(resultList)
 
-            }
-        }
-    }
-   /* private val items = listOf(
-        "JetBrains/kotlin - The Kotlin Programming Language",
-        "exercism/kotlin - Exercism exercises in Kotlin",
-        "cbeust/kobalt - A Kotlin-based build system for the JVM",
-        "JetBrains/kotlin - The Kotlin Programming Language",
-        "exercism/kotlin - Exercism exercises in Kotlin",
-        "cbeust/kobalt - A Kotlin-based build system for the JVM",
-        "JetBrains/kotlin - The Kotlin Programming Language"
-    )*/
 
-    @DelicateCoroutinesApi
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.AppTheme)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
 
         val repoList = findViewById<RecyclerView>(R.id.repoList)
         repoList.layoutManager = LinearLayoutManager(this)
-      //  repoList.adapter = RepoListAdapter()
+       //   repoList.adapter = RepoListAdapter(callback)
 
-        val url =
-            "https://api.github.com/search/repositories?q=mario+language:kotlin&sort=stars&order=desc"
         if (isNetworkConnected()) {
 
-                GlobalScope.async(Dispatchers.Default) {
-                    // do background work
-                    val result=Request().run()
-                    withContext(Main) {
-                       repoList.adapter = RepoListAdapter(result)
-                    }
-                }
+            retrieveRepositories()
+
         } else {
+
             AlertDialog.Builder(this).setTitle("No internet connection")
                 .setMessage("Please check your internet connection and try again")
-                .setPositiveButton(android.R.string.ok) {_,_ ->}
+                .setPositiveButton(android.R.string.ok) { _, _ -> }
                 .setIcon(android.R.drawable.ic_dialog_alert).show()
-
-
         }
 
-
+        refreshButton.setOnClickListener {
+            retrieveRepositories()
+        }
     }
+
+    private fun retrieveRepositories() {
+        //1 Create a Coroutine scope using a job to be able to cancel when needed
+        val mainActivityJob = Job()
+
+
+        //2 Handle exceptions if any
+        val errorHandler = CoroutineExceptionHandler { _, exception ->
+            AlertDialog.Builder(this).setTitle("Error")
+                .setMessage(exception.message)
+                .setPositiveButton(android.R.string.ok) { _, _ -> }
+                .setIcon(android.R.drawable.ic_dialog_alert).show()
+        }
+        //3 the Coroutine runs using the Main (UI) dispatcher
+        val coroutineScope = CoroutineScope(mainActivityJob + Dispatchers.Main)
+        coroutineScope.launch(errorHandler) {
+            //4
+            val resultList = RepositoryRetriever().getRepositories()
+            repoList.adapter = RepoListAdapter(resultList)
+
+        }
+    }
+
 
     private fun isNetworkConnected(): Boolean {
         val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as
